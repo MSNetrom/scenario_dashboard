@@ -1,0 +1,14 @@
+name: scenario_dashboard
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pandas
+  - dash
+  - pyyaml
+  - plotly
+  - pip
+  - pip:
+    - kaleido
+    - dash_bootstrap_components

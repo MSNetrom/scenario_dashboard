@@ -14,8 +14,9 @@ Run the following command in your terminal:
 ```
 git clone https://github.com/danareu/scenario_dashboard.git
 ```
-2. Install the required dependencies from the requirements.txt file <br />
-Create a virutal environment and install the dependencies from requirements.txt
+2. Install the required dependencies <br />
+For **conda**; Do: ```conda env create -f environment.yml```, Activate: ```conda activate scenario_dashboard```.
+<br/>**Or** - Create a virutal environment and install the dependencies from *requirements.txt*
 
 3. Run main.py <br />
 Run main.py and click on the link that is shown in the terminal. E.g.:<br />
