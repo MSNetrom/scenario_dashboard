@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 from data.data_class import read_geojson_file
 
+from .colors import consistent_pastel_color_generator
 
 class PlotObject:
 
@@ -240,27 +241,26 @@ def make_pie_chart_capacities(capacities: list, geojson: dict, lataxis: list, lo
     Returns:
     - list_traces (List[Any]): A list of pie chart traces.
     """
-
-    # Filter capacities based on available technologies
-    capacities = capacities[capacities["Technology"].isin(colour_codes.keys())]
     list_traces = []
 
     # Iterate over unique regions
     for r in capacities["Region"].unique():
         x_domain = (geojson[r]['longitude'] - lonaxis[0]) / (lonaxis[1] - lonaxis[0])
         y_domain = (geojson[r]['latitude'] - lataxis[0]) / (lataxis[1] - lataxis[0])
+
         # Extract colors for the pie chart
-        colors = [colour_codes[c] for c in
-                  capacities[(capacities['Region'] == r) & (capacities["Year"] == year)]['Technology']]
+        colors = [consistent_pastel_color_generator(tech, factor=0.3) for tech in capacities[(capacities['Region'] == r) & (capacities["Year"] == year)]["Technology"]]
+            
         # Check if there is data for the year
         if capacities[(capacities['Region'] == r) & (capacities["Year"] == year)]['Value'].sum() > 0:
             pie_trace = go.Pie(
                 labels=capacities[(capacities['Region'] == r) & (capacities["Year"] == year)]['Technology'],
                 values=capacities[(capacities['Region'] == r) & (capacities["Year"] == year)]['Value'],
-                marker=dict(colors=colors),
+                marker={"colors": colors},
                 textinfo='none',
-                domain=dict(x=[max(0, x_domain - 0.02), x_domain + 0.02],
-                            y=[max(0, y_domain - 0.02), y_domain + 0.02])
+                domain=dict(x=[max(0, x_domain - 0.025), x_domain + 0.025],
+                            y=[max(0, y_domain - 0.025), y_domain + 0.025]),
+                title=r
             )
             list_traces.append(pie_trace)
     return list_traces

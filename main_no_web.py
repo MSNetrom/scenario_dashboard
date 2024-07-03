@@ -22,9 +22,6 @@ scenarios = list(figure_dict.keys())
 
 # Add each scenario's figures to the subplot
 for name, figure in figure_dict.items():
-    #print(name, "Length", len(figure))
     for f in figure:
-        #f.write_image(f"{name}_{f.layout.title.text}.png")
         f.update_layout(height=1080, width=1520)
         f.show()
-input()
