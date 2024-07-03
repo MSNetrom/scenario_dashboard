@@ -22,6 +22,7 @@ class PlotObject:
         ## cycle through color palette
         palette = cycle(px.colors.qualitative.Light24)
         technology_list = []
+        
 
         for df in self.df_list:
             technology_list += list(df['Technology'].unique())
@@ -116,7 +117,7 @@ class PlotObject:
                           )
         return fig
 
-    def create_dict_tade_geo_fig(self, capacities=[]):
+    def create_dict_tade_geo_fig(self, capacities=[]) -> dict[str, list[go.Figure]]:
         """
         Create dictionary with scenario key word
         Workaround bc multi-plots are too complicated for scatter_geo
@@ -139,7 +140,7 @@ class PlotObject:
 
         return scenario_to_year
 
-    def plot_trade_capacity(self, df, year, scenario, geojson, show_marker=False, capacities=None, pie_chart=False):
+    def plot_trade_capacity(self, df, year, scenario, geojson, show_marker=False, capacities=None, pie_chart=False) -> go.Figure:
         fig = go.Figure()
         lataxis = [35, 70]
         lonaxis = [-9.7, 38]
