@@ -132,6 +132,8 @@ D_Battery_Redox;Power
 D_Gas_H2;Power
 D_Heat_HLR;Power
 D_Heat_HLI;Power
+D_Heat_HLDH;Power
+D_Heat_HLB;Power
 D_PHS_Residual;Power
 D_PHS;Power
 D_CAES;Power
@@ -163,3 +165,16 @@ CHP_Hydrogen_FuelCell;CHP
 CHP_Oil;CHP
 Infeasibility_Mob_Passenger;Transportation
 Infeasibility_Mob_Freight;Transportation
+HLDH_Biomass_Boiler;Power
+HLDH_Biomass_CHP;Power
+HLDH_Coal_Boiler;Power
+HLDH_Coal_CHP;Power
+HLDH_Oil_Boiler;Power
+HLDH_Gas_Boiler;Power
+HLDH_Gas_CHP;Power
+HLDH_Geothermal;Power
+HLDH_Solar_Thermal;Power
+HLDH_WasteToEnergy_Boiler;Power
+HLDH_WasteToEnergy_CHP;Power
+HLDH_Heatpump;Power
+HLDH_ExcessHeat;Power

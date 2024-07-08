@@ -31,6 +31,19 @@ class DataRaw:
                     if not lines[i + 1].startswith(key):
                         break
         return self.create_df(data_list, key)
+    
+    def filter_numeric(self, column):
+        # Check if values are numeric
+        self.df[column] = pd.to_numeric(self.df[column], errors='coerce')
+    
+    def filter_by_column_string_contains(self, column: str, identifier: str):
+        self.df = self.df[self.df[column].str.contains(identifier)]
+        #self.sort_reindex_values()
+
+    def filter_region(self, region: str):
+        # filter only region
+        self.df = self.df[self.df['Region'] == region]
+
 
     def filter_sector(self):
         # filter only POWER sector technologies
