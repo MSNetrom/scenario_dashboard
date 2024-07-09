@@ -8,7 +8,7 @@ from data import aggregation as tech_aggregation
 #                  type_of_data_to_read="ProductionByTechnologyAnnual", 
 #                  columns=header_mapping["ProductionByTechnologyAnnual"]["columns"])
 
-d = DataProcessor(directory=Path(__file__).parent / "Solution_day40.sol", 
+d = DataProcessor(sol_path=Path(__file__).parent / "Solution_day40.sol", 
                   type_of_data_to_read="TotalCapacityAnnual", 
                   columns=header_mapping["TotalCapacityAnnual"]["columns"])
 
@@ -20,15 +20,16 @@ d.force_numeric(column="Value")
 #d.filter_by_string(column="Tec
 
 d.filter_by_containing_string(column="Technology", identifier="D_")
+#d.aggreagate_all_by_sum(column_to_aggregate="Region", aggregated_entry_name="All_Region", column_to_sum="Value")
 #power_techs = get_technology_sector()["Power"]
 #d.filter_by_list(column="Technology", by_filter=power_techs)
 #d.aggregate_by_sum(column_to_sum="Value", groups_memberships=tech_aggregation)
 #d.filter_by_string(column="Fuel", identifier="Power")
 
 
-d.df = d.df[d.df["Value"] > 0]
+#d.df = d.df[d.df["Value"] > 0]
 
-d.show_example_rows()
+
 
 """data = {
     'Year': [2018, 2025, 2030, 2035, 2040, 2045, 2050, 2018, 2025, 2030, 2035, 2040, 2045, 2050],
@@ -41,12 +42,19 @@ d.show_example_rows()
 
 df = pd.DataFrame(data)"""
 
+d.show_example_rows()
+
 #print(df)
 fig = PlotCreator(d.df).plot_stacked_quantity_evolution(region="DE")
 
 fig.update_layout(
-    title="Storage Capacity",
+    width=1400,
+    height=800,
+    title="Storage Capacity All Contries",
+    yaxis_title="Capacity [GW]",
+    xaxis_title="Year",
 )
+fig.write_image("storage_capacity_germany.pdf")
 
 fig.show()
 

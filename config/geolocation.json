@@ -40,7 +40,7 @@
   "OFF_SEW": {"latitude": 57.58, "longitude": 11.625, "name": "OFF_SEW"},
   "DK1": {"latitude": 56.13, "longitude": 9.48, "name": "DK1"},
   "DK2": {"latitude": 55.41, "longitude": 11.835, "name": "DK2"},
-  "NO": {"latitude": 60.357866, "longitude": 8.148730, "name": "OFF_NO"},
+  "NO": {"latitude": 60.0, "longitude": 6.0, "name": "OFF_NO"},
   "HU": {"latitude": 47.162494, "longitude": 19.503304, "name": "Hungary"},
   "NONordvestC": {"latitude": 63.77727349,  "longitude": 6.647918674,  "name": "NONordvestC"},
   "NONordvestA": {"latitude": 66.23346252,  "longitude": 9.580682563,  "name": "NONordvestA"},
