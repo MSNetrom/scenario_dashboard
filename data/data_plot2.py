@@ -29,7 +29,7 @@ class TradeCapacityMapFacilitator(FacilitatorBase):
         Locations: dict[str, GeoLocation]
 
 
-    def __init__(self, sol_path: Path, year: int):
+    def __init__(self, sol_path: Path = None, year: int = None):
         self._sol_path = sol_path
         self._year = year
 
@@ -116,32 +116,36 @@ class TradeCapacityMapFacilitator(FacilitatorBase):
                               oceancolor="#DCFBFB",
                               landcolor='rgb(229, 229, 229)')))
         return fig
+    
+class StackedQuantityEvolutionFacilitator(FacilitatorBase):
 
-class PlotCreator:
+    class RelevantData(DataProcessor): pass
 
-    def __init__(self, df: pd.DataFrame):
-        self._df = df.copy()
+    def __init__(self, sol_path: Path = None, region: str = None):
+        self._sol_path = sol_path
+        self._region = region
 
-    #def sum_aggregate_column
+    def get_relevant_data(self) -> RelevantData:
 
-    def plot_stacked_quantity_evolution(self, region: str, stacked_column: str = "Technology") -> go.Figure:
+        d = DataProcessor(sol_path=self._sol_path, 
+                  type_of_data_to_read="TotalCapacityAnnual", 
+                  columns=header_mapping["TotalCapacityAnnual"]["columns"])
+        
+        d.force_numeric(column="Value")
 
-        # Use Year along x-axis, Quantity along y-axis, and Technology as stacked bars
+        return d
+    
+    def plot(self, relevant_data: RelevantData) -> go.Figure:
+
+        relevant_data.filter_by_identifier(column="Region", identifier=self._region)
+
         fig = go.Figure()
 
-        # Loop years
-        #for j, y in enumerate(self.year, start=1):
-                # Iterate over unique technologies for each year
-        #for t in self.df[self.df['Year'] == y]['Technology'].unique():
-
-        #for y in self._df['Year'].unique():
-        self._df.sort_values(by=['Year', 'Value'], ascending= [True, False], inplace=True)
-        for t in self._df['Technology'].unique():
+        relevant_data.df.sort_values(by=['Year', 'Value'], ascending= [True, False], inplace=True)
+        for t in relevant_data.df['Technology'].unique():
             # Add trace to subplot
-            #print(self._df[(self._df['Year'] == y) & (self._df['Technology'] == t) & (self._df["Region"] == region)]['Year'])
-            #print(self._df[(self._df['Year'] == y) & (self._df['Technology'] == t) & (self._df["Region"] == region)]['Value'])
-            fig.add_trace(go.Scatter(x=self._df[(self._df['Technology'] == t) & (self._df["Region"] == region)]['Year'],
-                                y=self._df[(self._df['Technology'] == t) & (self._df["Region"] == region)]['Value'],
+            fig.add_trace(go.Scatter(x=relevant_data.df[relevant_data.df['Technology'] == t]['Year'],
+                                y=relevant_data.df[relevant_data.df['Technology'] == t]['Value'],
                                 mode='lines',
                                 name=t,
                                 #fill='tonexty',
@@ -159,4 +163,53 @@ class PlotCreator:
                         )
                     
         return fig
+    
+    
+class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
+    class RelevantData(DataProcessor): pass
+
+    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, region: str = None, column_to_plot: str = None):
+        self._sol_path = sol_path
+        self._type_of_data_to_read = type_of_data_to_read
+        self._region = region
+        self._column_to_plot = column_to_plot
+
+    def get_relevant_data(self) -> RelevantData:
+
+        d = DataProcessor(sol_path=self._sol_path, 
+                  type_of_data_to_read=self._type_of_data_to_read, 
+                  columns=header_mapping[self._type_of_data_to_read]["columns"])
+        
+        d.force_numeric(column="Value")
+
+        return d
+    
+    def plot(self, relevant_data: RelevantData) -> go.Figure:
+
+        relevant_data.filter_by_identifier(column="Region", identifier=self._region)
+
+        fig = go.Figure()
+
+        relevant_data.df.sort_values(by=['Year', 'Value'], ascending= [True, False], inplace=True)
+        for entry in relevant_data.df[self._column_to_plot].unique():
+            # Add trace to subplot
+            fig.add_trace(go.Scatter(x=relevant_data.df[relevant_data.df[self._column_to_plot] == entry]['Year'],
+                                y=relevant_data.df[relevant_data.df[self._column_to_plot] == entry]['Value'],
+                                mode='lines',
+                                name=entry,
+                                #fill='tonexty',
+                                fillcolor=consistent_pastel_color_generator(entry),  #self.color_to_tech[t],
+                                line_color=consistent_pastel_color_generator(entry),
+                                stackgroup="one",
+                                legendgroup=entry,
+                                showlegend=True,
+                            ))
+            
+        fig.update_layout(
+                        xaxis_title="Year",
+                        barmode='stack',
+                        font=dict(size=22)
+                        )
+                    
+        return fig

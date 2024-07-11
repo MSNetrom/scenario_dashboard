@@ -28,6 +28,28 @@ def get_region_location() -> dict[str, GeoLocation]:
 
     return {region: GeoLocation(latitude=data['latitude'], longitude=data['longitude'], name=data['name']) for region, data in geo_location_raw.items()}
 
+def read_sol_keys(sol_path: Path) -> set[str]:
+
+    with open(sol_path, "r") as f:
+        lines = f.read().splitlines()
+        keys = set()
+        for l in lines[1:]:
+            keys.add(l.split("[", 1)[0])
+
+    return keys
+
+
+def find_keys_containing_string(sol_path: Path, string: str) -> set[str]:
+
+    with open(sol_path, "r") as f:
+        lines = f.read().splitlines()
+        keys = set()
+        for l in lines[1:]:
+            if string in l:
+                keys.add(l.split("[", 1)[0])
+
+    return keys
+
 class DataProcessor:
 
     def __init__(self, sol_path: Path, type_of_data_to_read: str, columns: list[str]):
