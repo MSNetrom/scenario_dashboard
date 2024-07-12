@@ -22,6 +22,59 @@ class FacilitatorBase(ABC):
     def plot(self, relevant_data: RelevantData) -> go.Figure:
         pass
 
+class HourlyFacilitatorBase(FacilitatorBase):
+
+    class RelevantData(DataProcessor): pass
+
+    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, year: int = None, region: str = None, extra_identifying_columns: list[str] = []):
+        self._sol_path = sol_path
+        self._type_of_data_to_read = type_of_data_to_read
+        self._year = year
+        self._region = region
+        self._extra_identifying_columns = extra_identifying_columns
+
+    def get_relevant_data(self) -> RelevantData:
+
+        return DataProcessor(sol_path=self._sol_path, 
+                             type_of_data_to_read=self._type_of_data_to_read, 
+                             columns=header_mapping[self._type_of_data_to_read]["columns"])
+    
+    def plot(self, relevant_data: RelevantData) -> go.Figure:
+
+        fig = go.Figure()
+
+        relevant_data.filter_by_identifier(column="Region", identifier=self._region)
+        relevant_data.filter_by_identifier(column="Year", identifier=self._year)
+
+        # Data of same year and same region, and same identifying columns should be one group plotted with same colors in the bars
+        grouped_df = relevant_data.df.groupby(self._extra_identifying_columns + ["Year", "Region"])
+
+        # Create a bar for each group
+        for group, data in grouped_df:
+
+            data = data.sort_values(by="TS")
+
+            name = " ".join(group[i] for i in range(len(self._extra_identifying_columns)))
+
+            fig.add_trace(go.Bar(x=data["TS"], y=data["Value"], name=name, marker_color=consistent_pastel_color_generator(name), showlegend=True))
+
+        fig.update_layout(barmode='stack', xaxis_title="Hour")
+
+        return fig
+    
+class HourlyTechActivityRateFacilitator(HourlyFacilitatorBase):
+
+    def __init__(self, sol_path: Path = None, year: int = None, region: str = None):
+        super().__init__(sol_path=sol_path, type_of_data_to_read="RateOfActivity", year=year, region=region, extra_identifying_columns=["Technology"])
+
+    def plot(self, relevant_data: HourlyFacilitatorBase.RelevantData) -> go.Figure:
+
+        fig = super().plot(relevant_data)
+
+        fig.update_layout(yaxis_title="Rate of Activity [TWh]")
+
+        return fig
+
 class TradeCapacityMapFacilitator(FacilitatorBase):
 
     class RelevantData(NamedTuple):
@@ -169,11 +222,11 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
     class RelevantData(DataProcessor): pass
 
-    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, region: str = None, column_to_plot: str = None):
+    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, region: str = None, extra_identifying_columns: list[str] = []):
         self._sol_path = sol_path
         self._type_of_data_to_read = type_of_data_to_read
         self._region = region
-        self._column_to_plot = column_to_plot
+        self._extra_identifying_columns = extra_identifying_columns
 
     def get_relevant_data(self) -> RelevantData:
 
@@ -183,6 +236,8 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
         
         d.force_numeric(column="Value")
 
+        d.df = d.df[d.df["Value"] > 0]
+
         return d
     
     def plot(self, relevant_data: RelevantData) -> go.Figure:
@@ -191,8 +246,26 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
         fig = go.Figure()
 
-        relevant_data.df.sort_values(by=['Year', 'Value'], ascending= [True, False], inplace=True)
-        for entry in relevant_data.df[self._column_to_plot].unique():
+        # relevant_data.df.sort_values(by=['Year', 'Value'], ascending= [True, False], inplace=True)
+
+        grouped_df = relevant_data.df.groupby(self._extra_identifying_columns + ["Year", "Region"])
+
+        added_names = set()
+
+        for group, data in grouped_df:
+
+
+            name = " -> ".join(group[i] for i in range(len(self._extra_identifying_columns))).strip()
+
+            fig.add_trace(go.Scatter(x=data["Year"], y=data["Value"], name=name, fillcolor=consistent_pastel_color_generator(name), 
+                                     line_color=consistent_pastel_color_generator(name), stackgroup="one", legendgroup=name, 
+                                     showlegend=name not in added_names))
+            
+            added_names.add(name)
+
+        #print(relevant_data.df.head(10))
+
+        """for entry in relevant_data.df[self._column_to_plot].unique():
             # Add trace to subplot
             fig.add_trace(go.Scatter(x=relevant_data.df[relevant_data.df[self._column_to_plot] == entry]['Year'],
                                 y=relevant_data.df[relevant_data.df[self._column_to_plot] == entry]['Value'],
@@ -204,7 +277,7 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
                                 stackgroup="one",
                                 legendgroup=entry,
                                 showlegend=True,
-                            ))
+                            ))"""
             
         fig.update_layout(
                         xaxis_title="Year",
@@ -212,4 +285,26 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
                         font=dict(size=22)
                         )
                     
+        return fig
+    
+
+class ProductionByTechnologyForFuelStackedQuantityEvolutionFacilitator(StackedQuantityEvolutionFacilitatorBase):
+
+    def __init__(self, sol_path: Path = None, region: str = None, fuels: list[str] = []):
+        self._fuels = fuels
+        super().__init__(sol_path=sol_path, type_of_data_to_read="ProductionByTechnologyAnnual", region=region, extra_identifying_columns=["Technology", "Fuel"])
+
+    def get_relevant_data(self) -> StackedQuantityEvolutionFacilitatorBase.RelevantData:
+        
+        relevant_data = super().get_relevant_data()
+        relevant_data.filter_by_list(column="Fuel", by_filter=self._fuels)
+        
+        return relevant_data
+    
+    def plot(self, relevant_data: StackedQuantityEvolutionFacilitatorBase.RelevantData) -> go.Figure:
+        
+        fig = super().plot(relevant_data)
+
+        fig.update_layout(yaxis_title="Production [TWh]", title="Production of fuel by technology")
+
         return fig

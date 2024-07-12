@@ -13,6 +13,9 @@ df = DataRaw(directory=Path(__file__).parent / "Solution_day40.sol",
 df.replace_offshore()
 df.filter_sector()
 df.aggregate_technologies()
+
+print(data_rw.df.head(10))
+print(df.df.head(10))
 #df.filter_by_column_string_contains(column="Technology", identifier="D_Heat_HLDH")
 
 figure_dict = PlotObject(key="trade_map", year=[2018, 2030, 2040, 2050], sector="Power", df_list=[data_rw.df], scenarios=["Test"]).create_dict_tade_geo_fig(capacities=[df.df])
