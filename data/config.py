@@ -89,7 +89,13 @@ header_mapping = {"TotalCapacityAnnual":
                       {"columns": ["Year", "Fuel", "Region1", "Region2", "Value"],
                        "units": "GW"},
                   "Export":
-                      {"columns": ["Year", "TS", "Fuel", "Region1", "Region2", "Value"]}}
+                      {"columns": ["Year", "TS", "Fuel", "Region1", "Region2", "Value"]},
+                  "UseByTechnologyAnnual": 
+                        {"columns": ["Year", "Technology", "Fuel", "Region", "Value"],
+                         "units": "TWh"}, 
+                    }
+
+# UseByTechnologyAnnual[2018,A_Rooftop_Commercial,Area_Rooftop_Commercial,AT]
 
 key_to_julia = {'capacities': 'TotalCapacityAnnual',
                 'trade_map': 'TotalTradeCapacity',

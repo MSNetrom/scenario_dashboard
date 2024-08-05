@@ -35,9 +35,14 @@ class HourlyFacilitatorBase(FacilitatorBase):
 
     def get_relevant_data(self) -> RelevantData:
 
-        return DataProcessor(sol_path=self._sol_path, 
-                             type_of_data_to_read=self._type_of_data_to_read, 
-                             columns=header_mapping[self._type_of_data_to_read]["columns"])
+        d = DataProcessor(sol_path=self._sol_path, 
+                            type_of_data_to_read=self._type_of_data_to_read, 
+                            columns=header_mapping[self._type_of_data_to_read]["columns"],
+                            read_year_split=True)
+        
+        d.force_numeric(column="TS")
+        d.force_numeric(column="Value")
+        return d
     
     def plot(self, relevant_data: RelevantData) -> go.Figure:
 
@@ -53,6 +58,7 @@ class HourlyFacilitatorBase(FacilitatorBase):
         for group, data in grouped_df:
 
             data = data.sort_values(by="TS")
+            data["TS"] = data["TS"].astype(str)
 
             name = " ".join(group[i] for i in range(len(self._extra_identifying_columns)))
 
@@ -67,6 +73,14 @@ class HourlyTechActivityRateFacilitator(HourlyFacilitatorBase):
     def __init__(self, sol_path: Path = None, year: int = None, region: str = None):
         super().__init__(sol_path=sol_path, type_of_data_to_read="RateOfActivity", year=year, region=region, extra_identifying_columns=["Technology"])
 
+    
+    def get_relevant_data(self) -> HourlyFacilitatorBase.RelevantData:
+        
+        d = super().get_relevant_data()
+        d.df["Value"] *= d.year_split  # Rate of activity is given as if the hourly value is the total value for the year
+
+        return d
+
     def plot(self, relevant_data: HourlyFacilitatorBase.RelevantData) -> go.Figure:
 
         fig = super().plot(relevant_data)
@@ -74,6 +88,33 @@ class HourlyTechActivityRateFacilitator(HourlyFacilitatorBase):
         fig.update_layout(yaxis_title="Rate of Activity [TWh]")
 
         return fig
+    
+class StorageDischargeHourlyRateFacilitator(HourlyTechActivityRateFacilitator):
+
+    """
+    Plots hourlay rate of techs, but turns storages into two techs, by adding "_Charge" and "_Discharge" to the name
+    """
+
+    def __init__(self, sol_path: Path = None, year: int = None, region: str = None):
+        super().__init__(sol_path=sol_path, year=year, region=region)
+
+    def get_relevant_data(self) -> HourlyFacilitatorBase.RelevantData:
+
+        d = super().get_relevant_data()
+        #d.force_numeric(column="Mode")
+
+        #print(d.df[d.df["Technology"].str.startswith("D_") & (d.df["Mode"] == 1)].head(100))
+        
+        # Change value to negative for those who starts with "D_", let column "Mode" with value "2" represent discharge
+        d.df.loc[d.df["Technology"].str.startswith("D_") & (d.df["Mode"] == 2), "Value"] *= -1
+
+        # Add "Charge" and "Discharge" to the storage technologie names "D_"
+        d.df.loc[d.df["Technology"].str.startswith("D_") & (d.df["Mode"] == 1), "Technology"] += "_Charge"
+        d.df.loc[d.df["Technology"].str.startswith("D_") & (d.df["Mode"] == 2), "Technology"] += "_Discharge"
+
+        return d
+
+        
 
 class TradeCapacityMapFacilitator(FacilitatorBase):
 
@@ -236,7 +277,7 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
         
         d.force_numeric(column="Value")
 
-        d.df = d.df[d.df["Value"] > 0]
+        #d.df = d.df[d.df["Value"] > 0]
 
         return d
     
@@ -297,14 +338,43 @@ class ProductionByTechnologyForFuelStackedQuantityEvolutionFacilitator(StackedQu
     def get_relevant_data(self) -> StackedQuantityEvolutionFacilitatorBase.RelevantData:
         
         relevant_data = super().get_relevant_data()
+
         relevant_data.filter_by_list(column="Fuel", by_filter=self._fuels)
         
         return relevant_data
     
     def plot(self, relevant_data: StackedQuantityEvolutionFacilitatorBase.RelevantData) -> go.Figure:
+
+        #relevant_data.filter_by_list(column="Fuel", by_filter=self._fuels)
         
         fig = super().plot(relevant_data)
 
         fig.update_layout(yaxis_title="Production [TWh]", title="Production of fuel by technology")
 
         return fig
+    
+
+class AnnualUseStackedQuantityEvolutionFacilitator(StackedQuantityEvolutionFacilitatorBase):
+
+    def __init__(self, sol_path: Path = None, region: str = None):
+        super().__init__(sol_path=sol_path, type_of_data_to_read="UseAnnual", region=region, extra_identifying_columns=["Fuel"])
+
+    def plot(self, relevant_data: StackedQuantityEvolutionFacilitatorBase.RelevantData) -> go.Figure:
+
+        fig = super().plot(relevant_data)
+
+        fig.update_layout(yaxis_title="Use [TWh]", title="Use of fuels")
+
+        return fig
+    
+
+class SurplusEnergyStackedQuantityEvolutionFacilitator(FacilitatorBase):
+
+    class RelevantData(NamedTuple):
+        prod_annual: DataProcessor
+        use_annual: DataProcessor
+
+    def __init__(self, sol_path: Path = None, region: str = None):
+        
+        self.prod_annual = StackedQuantityEvolutionFacilitatorBase(sol_path=sol_path, type_of_data_to_read="ProductionByTechnologyAnnual", region=region, extra_identifying_columns=["Technology", "Fuel"])
+        self.use_annual = StackedQuantityEvolutionFacilitatorBase(sol_path=sol_path, type_of_data_to_read="UseByTechnologyAnnual", region=region, extra_identifying_columns=["Technology", "Fuel"])

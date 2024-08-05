@@ -3,6 +3,8 @@ import pandas as pd
 import json
 from typing import NamedTuple, Any
 
+from .config import header_mapping
+
 def get_technology_sector() -> dict[str, list[str]]:
 
     df_input = pd.read_csv(
@@ -52,37 +54,55 @@ def find_keys_containing_string(sol_path: Path, string: str) -> set[str]:
 
 class DataProcessor:
 
-    def __init__(self, sol_path: Path, type_of_data_to_read: str, columns: list[str]):
-        self._sol_path = sol_path
-        self._type_of_data_to_read = type_of_data_to_read
-        self._columns = columns
-        
-        
-        # Read data
-        with open(self._sol_path, "r") as f:
-            lines = f.read().splitlines()
-            data_list = []
-            for i, l in enumerate(lines, start=-1):
-                if l.startswith(f"{self._type_of_data_to_read}["):
-                    m = l.split('[', 1)[1].split(']')[0].split(",")
-                    m.append(l.split(" ")[-1])
-                    data_list.append(m)
-                    if not lines[i + 1].startswith(self._type_of_data_to_read):
-                        break
+    def __init__(self, sol_path: Path, type_of_data_to_read: str, columns: list[str], read_year_split: bool = False):
 
-        self.df = pd.DataFrame(data_list, columns=self._columns)
+        self.df = self._read_file(sol_path, type_of_data_to_read, columns)
 
         if "Value" in self.df.columns:
             self.df['Value'] = pd.to_numeric(self.df['Value'], errors='coerce')
-        
-        if "Year" in self.df.columns:
-            self.df['Year'] = pd.to_numeric(self.df['Year'], errors='raise')
+
+        for col in ["Year", "Mode"]:
+            if col in self.df.columns:
+                self.df[col] = pd.to_numeric(self.df[col], errors='raise')
+
+
+        # Get year_split, 1 / number of timesteps per year, Just use RateofActivity for this
+        self._year_split = None
+        if read_year_split:
+            df_with_timestamp = self.df if "TS" in self.df.columns else self._read_file(sol_path, "RateOfActivity", header_mapping["RateOfActivity"]["columns"])
+            self._year_split = 1 / len(df_with_timestamp["TS"].unique())
 
         # Convert from PetaJoules to TerraWhatHours
         if type_of_data_to_read in ["ProductionByTechnologyAnnual", "Export", "UseAnnual", "RateOfActivity", "ProductionByTechnology"]:
+            print("Converting from PetaJoules to TerraWattHours")
             self.df['Value'] = pd.to_numeric(self.df['Value']) / 3.6
         else:
             print("No unit conversion applied!")
+
+    def _read_file(self, sol_path: Path, type_of_data_to_read: str, columns: list[str]) -> pd.DataFrame:
+
+        # Read data
+        with open(sol_path, "r") as f:
+            lines = f.read().splitlines()
+            data_list = []
+            for i, l in enumerate(lines, start=-1):
+                if l.startswith(f"{type_of_data_to_read}["):
+                    m = l.split('[', 1)[1].split(']')[0].split(",")
+                    m.append(l.split(" ")[-1])
+
+                    data_list.append(m)
+                    if not lines[i + 1].startswith(type_of_data_to_read):
+                        break
+
+        self.df = pd.DataFrame(data_list, columns=columns)
+
+        return self.df
+    
+    @property
+    def year_split(self):
+        if self._year_split is None:
+            raise ValueError("year_split has not been calculated, set read_year_split=True in the constructor")
+        return self._year_split
 
     def filter_by_list(self, column: str, by_filter: list[str]):
         self.df = self.df[self.df[column].isin(by_filter)]
@@ -109,3 +129,6 @@ class DataProcessor:
 
     def filter_by_containing_string(self, column: str, identifier: str):
         self.df = self.df[self.df[column].str.contains(identifier)]
+
+    def filter_by_containing_string_in_list(self, column: str, identifier_list: list[str]):
+        self.df = self.df[self.df[column].str.contains("|".join(identifier_list))]
