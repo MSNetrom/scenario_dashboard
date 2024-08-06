@@ -5,8 +5,8 @@ import pandas as pd
 from typing import NamedTuple
 from abc import ABC, abstractmethod
 
-from .data_raw2 import GeoLocation, DataProcessor, get_region_location
-from .config import header_mapping
+from ..data.data_processor import GeoLocation, DataProcessor, get_region_location
+from ..data.config import HEADER_MAPPING
 from .colors import consistent_pastel_color_generator
 
 class FacilitatorBase(ABC):
@@ -33,20 +33,25 @@ class HourlyFacilitatorBase(FacilitatorBase):
         self._region = region
         self._extra_identifying_columns = extra_identifying_columns
 
-    def get_relevant_data(self) -> RelevantData:
+    @staticmethod
+    def _get_relevant_data(sol_path: Path, type_of_data_to_read: str, year: int, region: str) -> RelevantData:
 
-        d = DataProcessor(sol_path=self._sol_path, 
-                            type_of_data_to_read=self._type_of_data_to_read, 
-                            columns=header_mapping[self._type_of_data_to_read]["columns"],
-                            read_year_split=True)
+        d = DataProcessor(sol_path=sol_path, 
+                  type_of_data_to_read=type_of_data_to_read, 
+                  columns=HEADER_MAPPING[type_of_data_to_read]["columns"], 
+                  read_year_split=True)
         
         d.force_numeric(column="TS")
         d.force_numeric(column="Value")
-        return d
-    
-    def plot(self, relevant_data: RelevantData) -> go.Figure:
 
-        fig = go.Figure()
+        return d
+
+    def get_relevant_data(self) -> RelevantData:
+        return HourlyFacilitatorBase._get_relevant_data(self._sol_path, self._type_of_data_to_read, self._year, self._region)
+    
+    def generate_traces(self, relevant_data: RelevantData, text="") -> list[go.Bar]:
+
+        traces = []
 
         relevant_data.filter_by_identifier(column="Region", identifier=self._region)
         relevant_data.filter_by_identifier(column="Year", identifier=self._year)
@@ -62,7 +67,16 @@ class HourlyFacilitatorBase(FacilitatorBase):
 
             name = " ".join(group[i] for i in range(len(self._extra_identifying_columns)))
 
-            fig.add_trace(go.Bar(x=data["TS"], y=data["Value"], name=name, marker_color=consistent_pastel_color_generator(name), showlegend=True))
+            traces.append(go.Bar(x=data["TS"], y=data["Value"], name=name, marker_color=consistent_pastel_color_generator(name), showlegend=True))
+
+        return traces
+
+    
+    def plot(self, relevant_data: RelevantData) -> go.Figure:
+
+        fig = go.Figure()
+
+        fig.add_traces(self.generate_traces(relevant_data))
 
         fig.update_layout(barmode='stack', xaxis_title="Hour")
 
@@ -72,6 +86,11 @@ class HourlyTechActivityRateFacilitator(HourlyFacilitatorBase):
 
     def __init__(self, sol_path: Path = None, year: int = None, region: str = None):
         super().__init__(sol_path=sol_path, type_of_data_to_read="RateOfActivity", year=year, region=region, extra_identifying_columns=["Technology"])
+
+    
+    @staticmethod
+    def _get_relevant_data(sol_path: Path, type_of_data_to_read: str, year: int, region: str) -> HourlyFacilitatorBase.RelevantData:
+        return HourlyFacilitatorBase._get_relevant_data(sol_path, type_of_data_to_read, year, region)
 
     
     def get_relevant_data(self) -> HourlyFacilitatorBase.RelevantData:
@@ -86,6 +105,87 @@ class HourlyTechActivityRateFacilitator(HourlyFacilitatorBase):
         fig = super().plot(relevant_data)
 
         fig.update_layout(yaxis_title="Rate of Activity [TWh]")
+
+        return fig
+    
+class HourlyTechActivityRateSolutionCompareFacilitator(HourlyTechActivityRateFacilitator):
+
+    #RelevantData = dict[str, DataProcessor]
+
+    def __init__(self, tech: str = None, sol_paths: dict[str, Path] = None, year: int = None, region: str = None):
+        self._tech = tech
+        self._sol_paths = sol_paths
+        self._year = year
+        self._region = region
+        self._extra_identifying_columns = ["Technology"]
+
+    def get_relevant_data(self) -> dict[str, DataProcessor]:
+        return {name: HourlyTechActivityRateFacilitator._get_relevant_data(path, "RateOfActivity", self._year, self._region) for name, path in self._sol_paths.items()}
+    
+    def plot(self, relevant_data: dict[str, DataProcessor]) -> go.Figure:
+
+        traces = []
+
+        for name, data in relevant_data.items():
+
+            # Do filtering
+            data.filter_by_identifier(column="Technology", identifier=self._tech)
+
+
+
+            #traces += self.generate_traces(data, text=name)
+        
+
+
+        fig = go.Figure()
+        fig.add_traces(traces)
+        fig.update_layout(barmode='group', xaxis_title="Hour", yaxis_title="Rate of Activity [TWh]")
+
+        return fig
+    
+class HourlyTechActivityRateSolutionCompareFacilitator2(HourlyTechActivityRateFacilitator):
+
+    #RelevantData = dict[str, DataProcessor]
+
+    def __init__(self, tech: str = None, sol_paths: dict[str, Path] = None, year: int = None, region: str = None):
+        self._tech = tech
+        self._sol_paths = sol_paths
+        self._year = year
+        self._region = region
+        self._extra_identifying_columns = ["Technology"]
+
+    def get_relevant_data(self) -> pd.DataFrame:
+        data = {name: HourlyTechActivityRateFacilitator(path, self._year, self._region).get_relevant_data() for name, path in self._sol_paths.items()}
+
+        # Generate a new df with extra column indicating the source of the data
+        d = pd.concat([data[name].df.assign(Source=name) for name in data.keys()])
+
+        return d
+
+
+    
+    def plot(self, relevant_data: pd.DataFrame) -> go.Figure:
+
+        traces = []
+
+        #for name, data in relevant_data.items():
+
+            # Do filtering
+        #    data.filter_by_identifier(column="Technology", identifier=self._tech)
+
+
+
+            #traces += self.generate_traces(data, text=name)
+
+        relevant_data = relevant_data[relevant_data["Technology"] == self._tech]
+
+        self.generate_traces(relevant_data)
+        
+        
+
+        fig = go.Figure()
+        fig.add_traces(traces)
+        fig.update_layout(barmode='group', xaxis_title="Hour", yaxis_title="Rate of Activity [TWh]")
 
         return fig
     
@@ -130,7 +230,7 @@ class TradeCapacityMapFacilitator(FacilitatorBase):
     def get_relevant_data(self) -> RelevantData:
 
         # Combined
-        TotalTradeCapacity = DataProcessor(sol_path=self._sol_path, type_of_data_to_read="TotalTradeCapacity", columns=header_mapping["TotalTradeCapacity"]["columns"])
+        TotalTradeCapacity = DataProcessor(sol_path=self._sol_path, type_of_data_to_read="TotalTradeCapacity", columns=HEADER_MAPPING["TotalTradeCapacity"]["columns"])
         TotalTradeCapacity.filter_by_identifier(column="Year", identifier=self._year)
         TotalTradeCapacity.df = TotalTradeCapacity.df.dropna(subset=["Value"])
         TotalTradeCapacity.df = TotalTradeCapacity.df[TotalTradeCapacity.df["Value"] > 0]
@@ -223,7 +323,7 @@ class StackedQuantityEvolutionFacilitator(FacilitatorBase):
 
         d = DataProcessor(sol_path=self._sol_path, 
                   type_of_data_to_read="TotalCapacityAnnual", 
-                  columns=header_mapping["TotalCapacityAnnual"]["columns"])
+                  columns=HEADER_MAPPING["TotalCapacityAnnual"]["columns"])
         
         d.force_numeric(column="Value")
 
@@ -273,7 +373,7 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
         d = DataProcessor(sol_path=self._sol_path, 
                   type_of_data_to_read=self._type_of_data_to_read, 
-                  columns=header_mapping[self._type_of_data_to_read]["columns"])
+                  columns=HEADER_MAPPING[self._type_of_data_to_read]["columns"])
         
         d.force_numeric(column="Value")
 

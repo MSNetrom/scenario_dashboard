@@ -65,7 +65,7 @@ agg_countries = {
 
 order_legend = ['Gas', 'Nuclear', 'Oil', 'Biomass', 'Hydro Reservoir', 'Hydro Run-of-River', 'Pumped Hydro', 'Wind Onshore', 'Wind Offshore', 'PV']
 
-header_mapping = {"TotalCapacityAnnual":
+HEADER_MAPPING = {"TotalCapacityAnnual":
                       {"columns": ["Year", "Technology", "Region", "Value"],
                        "units": "GW"},
                   "ProductionByTechnology":

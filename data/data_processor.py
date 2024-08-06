@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 import pandas as pd
 import json
 from typing import NamedTuple, Any
 
-from .config import header_mapping
+from .config import HEADER_MAPPING
 
 def get_technology_sector() -> dict[str, list[str]]:
 
@@ -69,7 +71,7 @@ class DataProcessor:
         # Get year_split, 1 / number of timesteps per year, Just use RateofActivity for this
         self._year_split = None
         if read_year_split:
-            df_with_timestamp = self.df if "TS" in self.df.columns else self._read_file(sol_path, "RateOfActivity", header_mapping["RateOfActivity"]["columns"])
+            df_with_timestamp = self.df if "TS" in self.df.columns else self._read_file(sol_path, "RateOfActivity", HEADER_MAPPING["RateOfActivity"]["columns"])
             self._year_split = 1 / len(df_with_timestamp["TS"].unique())
 
         # Convert from PetaJoules to TerraWhatHours
@@ -97,6 +99,14 @@ class DataProcessor:
         self.df = pd.DataFrame(data_list, columns=columns)
 
         return self.df
+
+    def concat(self, this_identifier: str, others: dict[str, DataProcessor]) -> DataProcessor:
+        self.df["Source"] = this_identifier
+        for identifier, other in others.items():
+            other.df["Source"] = identifier
+            self.df = pd.concat([self.df, other.df], ignore_index=True)
+
+        return self
     
     @property
     def year_split(self):
@@ -104,7 +114,7 @@ class DataProcessor:
             raise ValueError("year_split has not been calculated, set read_year_split=True in the constructor")
         return self._year_split
 
-    def filter_by_list(self, column: str, by_filter: list[str]):
+    def filter_by_list(self, column: str, by_filter: list[Any]):
         self.df = self.df[self.df[column].isin(by_filter)]
 
     def aggregate_by_sum(self, column_to_sum: str, groups_memberships: dict[str, str]):
@@ -132,3 +142,10 @@ class DataProcessor:
 
     def filter_by_containing_string_in_list(self, column: str, identifier_list: list[str]):
         self.df = self.df[self.df[column].str.contains("|".join(identifier_list))]
+
+def concat(data_processors: dict[str, DataProcessor]) -> DataProcessor:
+    # Concat and add source
+    source, data_processor = data_processors.popitem()
+    data_processor.concat(source, data_processors)
+
+    return data_processor
