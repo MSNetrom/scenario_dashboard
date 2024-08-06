@@ -76,7 +76,7 @@ class ProductionByTechnologyForFuelStackedQuantityEvolutionFacilitator(StackedQu
         
         relevant_data = super().get_relevant_data()
 
-        relevant_data.filter_by_list(column="Fuel", by_filter=self._fuels)
+        relevant_data.filter_by_list(column="Fuel", identifier_list=self._fuels)
         
         return relevant_data
     

@@ -56,15 +56,25 @@ def find_keys_containing_string(sol_path: Path, string: str) -> set[str]:
 
 class DataProcessor:
 
-    def __init__(self, sol_path: Path, type_of_data_to_read: str, columns: list[str], read_year_split: bool = False):
+    def __init__(self, sol_paths: dict[str, Path], type_of_data_to_read: str, read_year_split: bool = False):
 
-        self.df = self._read_file(sol_path, type_of_data_to_read, columns)
+        '''
+        Read data from multiple sol files, and concatenate them by adding a column "Source" to the dataframe, with names based on keys in the sol_paths dictionary.
+        '''
+        columns = HEADER_MAPPING[type_of_data_to_read]["columns"]
 
-        if "Value" in self.df.columns:
-            self.df['Value'] = pd.to_numeric(self.df['Value'], errors='coerce')
+        source, sol_path = sol_paths.popitem()
+        self.df = self._read_file(sol_path, type_of_data_to_read, columns.keys())
+        self.df["Source"] = source
 
-        for col in ["Year", "Mode"]:
-            if col in self.df.columns:
+        for source, sol_path in sol_paths.items():
+            df = self._read_file(sol_path, type_of_data_to_read, columns.keys())
+            df["Source"] = source
+            self.df = pd.concat([self.df, df], ignore_index=True)
+
+        # Convert to numeric
+        for col, dtype in columns.items():
+            if dtype == "Numeric":
                 self.df[col] = pd.to_numeric(self.df[col], errors='raise')
 
 
@@ -75,11 +85,12 @@ class DataProcessor:
             self._year_split = 1 / len(df_with_timestamp["TS"].unique())
 
         # Convert from PetaJoules to TerraWhatHours
-        if type_of_data_to_read in ["ProductionByTechnologyAnnual", "Export", "UseAnnual", "RateOfActivity", "ProductionByTechnology"]:
+        if HEADER_MAPPING[type_of_data_to_read]["units"] == "TWh":
             print("Converting from PetaJoules to TerraWattHours")
-            self.df['Value'] = pd.to_numeric(self.df['Value']) / 3.6
+            self.df['Value'] /= 3.6
         else:
             print("No unit conversion applied!")
+
 
     def _read_file(self, sol_path: Path, type_of_data_to_read: str, columns: list[str]) -> pd.DataFrame:
 
@@ -96,9 +107,7 @@ class DataProcessor:
                     if not lines[i + 1].startswith(type_of_data_to_read):
                         break
 
-        self.df = pd.DataFrame(data_list, columns=columns)
-
-        return self.df
+        return pd.DataFrame(data_list, columns=columns)
 
     def concat(self, this_identifier: str, others: dict[str, DataProcessor]) -> DataProcessor:
         self.df["Source"] = this_identifier
@@ -114,8 +123,8 @@ class DataProcessor:
             raise ValueError("year_split has not been calculated, set read_year_split=True in the constructor")
         return self._year_split
 
-    def filter_by_list(self, column: str, by_filter: list[Any]):
-        self.df = self.df[self.df[column].isin(by_filter)]
+    def filter_by_list(self, column: str, identifier_list: list[Any]):
+        self.df = self.df[self.df[column].isin(identifier_list)]
 
     def aggregate_by_sum(self, column_to_sum: str, groups_memberships: dict[str, str]):
         self.df.replace(groups_memberships, inplace=True)

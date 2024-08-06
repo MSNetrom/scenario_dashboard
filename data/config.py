@@ -66,13 +66,13 @@ agg_countries = {
 order_legend = ['Gas', 'Nuclear', 'Oil', 'Biomass', 'Hydro Reservoir', 'Hydro Run-of-River', 'Pumped Hydro', 'Wind Onshore', 'Wind Offshore', 'PV']
 
 HEADER_MAPPING = {"TotalCapacityAnnual":
-                      {"columns": ["Year", "Technology", "Region", "Value"],
+                      {"columns": {"Year": "Numeric", "Technology": "String", "Region": "String", "Value": "Numeric"},
                        "units": "GW"},
                   "ProductionByTechnology":
                       {"columns": ["Year", "TS","Technology", "Fuel", "Region", "Value"],
                        "units": "TWh"},
                   "RateOfActivity":
-                      {"columns": ["Year", "TS", "Technology", "Mode", "Region", "Value"],
+                      {"columns": {"Year": "Numeric", "TS": "Numeric", "Technology": "String", "Mode": "Numeric", "Region": "String", "Value": "Numeric"},
                        "units": "TWh"},
                   "ProductionByTechnologyAnnual":
                       {"columns": ["Year", "Technology", "Fuel", "Region", "Value"],
