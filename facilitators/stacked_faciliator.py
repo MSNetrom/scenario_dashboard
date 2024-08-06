@@ -1,31 +1,34 @@
 import plotly.graph_objects as go
 from pathlib import Path
+from typing import Callable
 
 import data.data_processor as dp
 from data import HEADER_MAPPING
 
 from .base_faciliator import FacilitatorBase
-from .colors import consistent_pastel_color_generator
+from .colors import my_color_generator
 
 class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
     class RelevantData(dp.DataProcessor): pass
 
-    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, region: str = None, extra_identifying_columns: list[str] = []):
+    def __init__(self, sol_path: Path = None, type_of_data_to_read: str = None, 
+                 region: str = None, extra_identifying_columns: list[str] = [],
+                 color_generator: Callable[[str], str] = my_color_generator):
         self._sol_path = sol_path
         self._type_of_data_to_read = type_of_data_to_read
         self._region = region
         self._extra_identifying_columns = extra_identifying_columns
+        self._color_generator = color_generator
 
     def get_relevant_data(self) -> RelevantData:
 
-        d = dp.DataProcessor(sol_path=self._sol_path, 
-                  type_of_data_to_read=self._type_of_data_to_read, 
-                  columns=HEADER_MAPPING[self._type_of_data_to_read]["columns"])
+        d = dp.DataProcessor(sol_paths={"anonym": self._sol_path}, 
+                  type_of_data_to_read=self._type_of_data_to_read)
         
         d.force_numeric(column="Value")
 
-        d.df = d.df[d.df["Value"] > 0]
+        #d.df = d.df[d.df["Value"] > 0]
 
         return d
     
@@ -34,6 +37,7 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
         traces = []
 
         relevant_data.filter_by_identifier(column="Region", identifier=self._region)
+        relevant_data.df = relevant_data.df.sort_values(by=self._extra_identifying_columns)
 
         grouped_df = relevant_data.df.groupby(self._extra_identifying_columns + ["Year", "Region"])
 
@@ -43,8 +47,8 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
 
             name = " -> ".join(group[i] for i in range(len(self._extra_identifying_columns))).strip()
 
-            traces.append(go.Scatter(x=data["Year"], y=data["Value"], name=name, fillcolor=consistent_pastel_color_generator(name), 
-                                     line_color=consistent_pastel_color_generator(name), stackgroup="one", legendgroup=name, 
+            traces.append(go.Scatter(x=data["Year"], y=data["Value"], name=name, fillcolor=self._color_generator(name), 
+                                     line_color=self._color_generator(name), stackgroup="one", legendgroup=name, 
                                      showlegend=name not in added_names))
             
             added_names.add(name)
@@ -60,7 +64,8 @@ class StackedQuantityEvolutionFacilitatorBase(FacilitatorBase):
         fig.update_layout(
                         xaxis_title="Year",
                         barmode='stack',
-                        font=dict(size=22)
+                        font=dict(size=22),
+                        legend={'traceorder': 'reversed'}
                         )
                     
         return fig

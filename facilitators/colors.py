@@ -48,3 +48,15 @@ def consistent_pastel_color_generator(text: str, factor=0.5) -> str: # pseudo-ra
     g = 255*factor + rand_list[2]*(1-factor)
 
     return f'#{int(r):02x}{int(b):02x}{int(g):02x}'
+
+
+def my_color_generator(text: str) -> str: 
+
+    specified_colors = {
+        'D_Heat_HLB': '#F0285F',
+    }
+
+    if text in specified_colors:
+        return specified_colors[text]
+    
+    return consistent_pastel_color_generator(text)
