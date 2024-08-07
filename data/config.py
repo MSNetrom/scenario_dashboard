@@ -78,7 +78,7 @@ HEADER_MAPPING = {"TotalCapacityAnnual":
                       {"columns": ["Year", "Technology", "Fuel", "Region", "Value"],
                        "units": "TWh"},
                   "StorageLevelTSStart":
-                      {"columns": ["Technology", "Year", "TS", "Region", "Value"],
+                      {"columns": {"Storage": "String", "Year": "Numeric", "TS": "Numeric", "Region": "String", "Value": "Numeric"},
                        "units": "TWh"},
                   "UseAnnual":
                       {"columns": ["Year", "Fuel", "Region", "Value"],
@@ -93,9 +93,16 @@ HEADER_MAPPING = {"TotalCapacityAnnual":
                   "UseByTechnologyAnnual": 
                         {"columns": ["Year", "Technology", "Fuel", "Region", "Value"],
                          "units": "TWh"}, 
+                  "CapitalInvestment": {"columns": {"Year": "Numeric", "Technology": "String", "Region": "String", "Value": "Numeric"},
+                                         "units": "M€"},
+                  "AccumulatedNewStorageCapacity": {"columns": {"Storage": "String", "Year": "Numeric", "Region": "String", "Value": "Numeric"},
+                                                    "units": "TWh"}, 
+                  "NewStorageCapacity": {"columns": {"Storage": "String", "Year": "Numeric", "Region": "String", "Value": "Numeric"},
+                                                    "units": "TWh"},
                     }
 
-# UseByTechnologyAnnual[2018,A_Rooftop_Commercial,Area_Rooftop_Commercial,AT]
+# AccumulatedNewStorageCapacity
+# CapitalInvestment
 
 key_to_julia = {'capacities': 'TotalCapacityAnnual',
                 'trade_map': 'TotalTradeCapacity',

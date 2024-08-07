@@ -52,6 +52,9 @@ def consistent_pastel_color_generator(text: str, factor=0.5) -> str: # pseudo-ra
 
 def my_color_generator(text: str) -> str: 
 
+    if text.startswith("S_"):
+        text = "D_" + text[2:]
+
     specified_colors = {
         'D_Heat_HLB': '#F0285F',
     }
