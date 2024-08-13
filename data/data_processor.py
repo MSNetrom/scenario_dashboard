@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 import json
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Callable
 
 from .config import HEADER_MAPPING
 
@@ -128,6 +128,10 @@ class DataProcessor:
 
     def aggregate_by_sum(self, column_to_sum: str, groups_memberships: dict[str, str]):
         self.df.replace(groups_memberships, inplace=True)
+        self.df = self.df.groupby([col for col in self.df.columns if col != column_to_sum], as_index=False).sum(numeric_only=True)
+
+    def aggregate_by_sum_function(self, column_to_change: str, column_to_sum: str, function: Callable[[str], str]):
+        self.df[column_to_change] = self.df[column_to_change].apply(function)
         self.df = self.df.groupby([col for col in self.df.columns if col != column_to_sum], as_index=False).sum(numeric_only=True)
 
     def sum_identical_entries(self, column_to_sum: str):

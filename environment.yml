@@ -13,3 +13,4 @@ dependencies:
     - kaleido==0.1.0post1
     - dash_bootstrap_components
     - nbformat
+    - openpyxl

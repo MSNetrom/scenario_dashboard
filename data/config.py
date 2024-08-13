@@ -1,4 +1,4 @@
-aggregation = {
+AGGREGATION = {
     'P_Nuclear': 'Nuclear',
     'P_Coal_Hardcoal': 'Hardcoal',
     'P_Coal_Lignite': 'Lignite',
@@ -27,6 +27,42 @@ aggregation = {
     'D_Battery_Li-Ion': 'Battery Li-Ion',
     'D_PHS_Residual': "Pumped Hydro",
 }
+
+def aggregator(tech: str):
+
+    if tech in ["RES_Wind_Offshore_Deep", "RES_Wind_Offshore_Transitional", "RES_Wind_Offshore_Shallow", "RES_Wind_Onshore_Opt", "RES_Wind_Onshore_Avg", "RES_Wind_Onshore_Inf"]:
+        return "Wind"
+    
+    if tech in ["RES_PV_Utility_Opt", "RES_PV_Utility_Avg", "RES_PV_Utility_Inf", "RES_PV_Rooftop_Residential", "Res_PV_Utility_Tracking", "RES_PV_Rooftop_Commercial"]:
+        return "Solar"
+
+    if "RES" in tech:
+        return "Renewables"
+    
+    #return "Others"
+    
+    if "Gas" in tech:
+        return "Gas"
+    
+    if "Coal" in tech:
+        return "Coal"
+    
+    if "Oil" in tech:
+        return "Oil"
+    
+    if "Biomass" in tech:
+        return "Biomass"
+    
+    if "H2" in tech:
+        return "Hydrogen"
+    
+    if "D_" in tech:
+        return "Storages"
+    
+    #return tech
+    return "Others"
+    
+
 
 colour_codes = {
     'Nuclear': 'rgb(112,112,112)',
@@ -75,7 +111,7 @@ HEADER_MAPPING = {"TotalCapacityAnnual":
                       {"columns": {"Year": "Numeric", "TS": "Numeric", "Technology": "String", "Mode": "Numeric", "Region": "String", "Value": "Numeric"},
                        "units": "TWh"},
                   "ProductionByTechnologyAnnual":
-                      {"columns": ["Year", "Technology", "Fuel", "Region", "Value"],
+                      {"columns": {"Year": "Numeric", "Technology": "String", "Fuel": "String", "Region": "String", "Value": "Numeric"},
                        "units": "TWh"},
                   "StorageLevelTSStart":
                       {"columns": {"Storage": "String", "Year": "Numeric", "TS": "Numeric", "Region": "String", "Value": "Numeric"},

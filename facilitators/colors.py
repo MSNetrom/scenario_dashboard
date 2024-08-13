@@ -55,6 +55,9 @@ def my_color_generator(text: str) -> str:
     if text.startswith("S_"):
         text = "D_" + text[2:]
 
+    if text == "Others":
+        text = "Rest" # I liked this color
+
     specified_colors = {
         'D_Heat_HLB': '#F0285F',
     }
