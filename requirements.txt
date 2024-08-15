@@ -1,8 +1,0 @@
-pandas
-dash_bootstrap_components
-dash
-pyyaml
-tkinter
-itertools
-json
-plotly
