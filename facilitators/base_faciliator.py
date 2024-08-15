@@ -15,7 +15,7 @@ class FacilitatorBase(ABC):
         pass
 
     @abstractmethod
-    def plot(self, traces) -> go.Figure:
+    def generate_figure(self, traces) -> go.Figure:
         
         fig = go.Figure()
         fig.add_traces(traces)

@@ -1,4 +1,4 @@
 from .hourly_facilitators import HourlyTechActivityRateSolutionCompareFacilitator
-from .stacked_faciliator import ProductionByTechnologyForFuelStackedQuantityEvolutionFacilitator, StackedQuantityEvolutionFacilitatorBase, StackedQuantityEvolutionFacilitatorBase2
-from .bar_base_faciliator import BarFacilitator
+from .stacked_faciliator import StackedQuantityEvolutionFacilitatorBase
+from .bar_faciliator import BarFacilitator
 from .colors import my_color_generator

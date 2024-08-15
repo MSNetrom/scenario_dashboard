@@ -1,70 +1,186 @@
-# scenario_dashboard GENeSYS-MOD
-The Global Energy System Model (GENeSYS-MOD) - Scenario Dashboard
+# Plotter for GENeSYS-MOD
 
-## Functionality 
-This Dashboard aims to visualize model outputs from GENeSYS-MOD in a more efficient way. The following options are currently available: 
-- Installed Capacity (Power Sector)
-- Total Production (Power Sector)
-- Export (Power Sector)
-- Transmission & Generation Expansion (Power Sector)
+## Installation
 
-## Installation 
-1. Clone the repository
-Run the following command in your terminal:
-```
-git clone https://github.com/danareu/scenario_dashboard.git
-```
-2. Install the required dependencies <br />
-For **conda**; Do: ```conda env create -f environment.yml```, Activate: ```conda activate scenario_dashboard```.
-<br/>**Or** - Create a virutal environment and install the dependencies from *requirements.txt*
+Recommended way to install is to use the provided `environment.yml` file to create a conda environment with all the necessary packages.
 
-3. Run main.py <br />
-Run main.py and click on the link that is shown in the terminal. E.g.:<br />
-
-```
-Dash is running on http://127.0.0.1:8050/
-
- * Serving Flask app 'main'
- * Debug mode: on
+```bash
+conda env create -f environment.yml
 ```
 
-## Dependencies
-The scenario_dashboard was written and tested with Python 3.9.
-It requires the following Python packages:
-- pandas
-- dash_bootstrap_components
-- dash
-- pyyaml
-- tkinter
-- itertools
-- json
-- plotly
+Then activate the environment:
 
+```bash
+conda activate genesys-mod-plotter
+```
 
-## Usage
-1. After running main.py and following the link, the following window in your preferred browser opens:
-![](https://github.com/danareu/scenario_dashboard/assets/122786331/f6404cad-62e5-4af5-bdb0-c9c4bd8269ae)
+## Introduction
 
-2. Add a scenario name in the **"Scenario"** field <br />
-3. Add the folder path that points towards your solution file by clicking on **"Browse"**. The dashboard accepts .txt or .sol files that have the following data structure:
-![txtfile](https://github.com/danareu/scenario_dashboard/assets/122786331/3c5ae3a5-da30-494a-b2ea-82b95ab7c964)
-4. Finally, choose your prefered decision variable from the drop down **"Result:"** and click the button **"Save"**.<br />
-5. Optional: If you want to compare scenarios, click **"Add"**. A new field opens where the information for the second scenario should be provided. There is no limit on the number of scenarios. However, for visulization purposes, it is recommended to use max. 3 scenarios for comparison.
-   
-## Screenshots
-**Installed Capacities for the Power Sector [GW]**
-![instcapa](https://github.com/danareu/scenario_dashboard/assets/122786331/49c78cbb-8c27-4f6d-a2b0-5fe4c6af67b4) | ![instcapac_country](https://github.com/danareu/scenario_dashboard/assets/122786331/3693e282-0d5f-4138-8565-2da6a0853de5)
+This repository aims to provide an easy framwork for creating plots for the GENeSYS-MOD model.
+There are two challenging parts of making these plots; **reading data** and **putting the data into the plotting library in the right format**.
+In an effort to remove the challenge of reading the data and putting it into the right format, this repository provides classes that does the heavy lifting, but allow you to do easy and usefull modifications to the data before plotting.
 
-**Total Production Power Sector [TWh]**
-![totalprod_country](https://github.com/danareu/scenario_dashboard/assets/122786331/0b3f9916-682c-4b5c-8988-ffe1e7ff2b75) | ![totalprod](https://github.com/danareu/scenario_dashboard/assets/122786331/2050432f-efe5-4884-bf6f-204a2b716597)
+## How to use
 
-**Export Power 2050 [TWh]**
-![export](https://github.com/danareu/scenario_dashboard/assets/122786331/4c2e43fd-9e78-4fec-ad6d-6ae9bcad102f)
+The repository have ``Faciliator-classes`` that have the following methods:
 
-**Transmission & Generation Expansion in 2050 [GW]**
-Installed Capacities Power Sector & Installed Transmission Capacities for Power
-![map](https://github.com/danareu/scenario_dashboard/assets/122786331/8cb8b661-3b8c-4fb9-b28d-b8452b53de62)
+- ``get_relevant_data(*some input args)``: This method reads the data from the GENeSYS-MOD output files.
+    - This data can then be modified by the user. The only rule is for the data to be in the given format / structure.
+- ``generate_traces(*data from above)``: This method generates the traces for the plotly library.
+    - These traces can then be modified by the user if needed.
+- ``get_figure(*traces from above)``: This method generates the figure for the plotly library.
+    - This figure can then be shown or saved by the user. Or modified further.
 
-**Comparing different scenarios**
-![diff](https://github.com/danareu/scenario_dashboard/assets/122786331/44f4e48e-0355-46f3-88fa-a4dfa8db4b87)
+## Examples
+
+One of the supported plot types are **Bar**-plots. Here is an example of how to make a bar plot of installed storage capacities in Europe in 2050.
+
+```python
+PROJECT_ROOT_DIR = Path().__file__
+SOLUTION_DIR = PROJECT_ROOT_DIR / "solution_files"
+
+# First we define the path to two different runs that we want to compare
+# These two runs will get their own label in an extra "Source" - column, afer reading the data
+NORMAL_DATA = SOLUTION_DIR / "solution.sol"
+```
+
+- When initializing the **BarFaciliator** we can easily make groups along on the x-axis of the plot. For now we want bars for each year, and within each year we want bars for both solutions files (*normal* and *expensive*). To do this we set ```x_grouping_columns=['Year', 'Source']```.
+- We can also set the how the groupings for the *legends* / *colors* should be. Should each **Storage**-type (in this case) have its own color, and maybe each **Source** should have its own color as well? We can achieve this by setting ```legend_grouping_columns=['Storage', 'Source']```. 
+
+```python
+# We initialize the bar facilitator with the paths to the two solutions and the type of data we want to read
+bar = BarFacilitator(sol_paths={"normal": NORMAL_DATA, "expensive": EXPENSIVE_DH_DATA}, type_of_data_to_read="NewStorageCapacity", 
+                     x_grouping_columns=["Year", "Source"], legend_grouping_columns=["Storage", "Source"])
+
+# We get the data from the facilitator
+data = bar.get_relevant_data()
+
+# We can sum all regions in EU, for this there is a helper function that can be used
+data.aggreagate_all_by_sum(column_to_aggregate="Region", aggregated_entry_name="ALL", column_to_sum="Value")
+
+# We can look at only district heating and building heating by accessing the data.df (Althoug we also have a helper function for this)
+data.df = data.df[data.df["Storage"].isin(["S_Heat_HLDH", "S_Heat_HLB"])]
+
+# We generate traces and a figure
+fig = bar.generate_figure(bar.generate_traces(data))
+
+# We can update the layout of the figure
+fig.update_layout(
+    title="District Heat New Storage Capacities (Energy)",
+    xaxis_title="Year",
+    yaxis_title="TWh",
+    width=800,
+    height=500
+)
+fig.show()
+```
+
+![New Storage Capacities](figures/new_capacity.png)
+
+As we see the **S_Heat_HLB** is very low. Let's see if we can change the plot a bit. We remove the **Source** grouping along the x-axis to get a stacked plot, and only include storages of more than 1 TWh.
+
+```python
+# We initialize the bar facilitator with the paths to the two solutions and the type of data we want to read
+bar = BarFacilitator(sol_paths={"normal": NORMAL_DATA, "expensive": EXPENSIVE_DH_DATA}, type_of_data_to_read="NewStorageCapacity", 
+                     x_grouping_columns=["Year"], legend_grouping_columns=["Storage", "Source"])
+
+# We get the data from the facilitator
+data = bar.get_relevant_data()
+
+# We can sum all regions in EU, for this there is a helper function that can be used
+data.aggreagate_all_by_sum(column_to_aggregate="Region", aggregated_entry_name="ALL", column_to_sum="Value")
+
+# We can look at only district heating and building heating by accessing the data.df (Althoug we also have a helper function for this)
+data.df = data.df[data.df["Storage"].isin(["S_Heat_HLDH", "S_Heat_HLB"])]
+
+# Only keep values over 0
+data.df = data.df[data.df["Value"] > 1]
+
+# We generate traces and a figure
+fig = bar.generate_figure(bar.generate_traces(data))
+
+# We can update the layout of the figure
+fig.update_layout(
+    title="District Heat New Storage Capacities (Energy)",
+    xaxis_title="Year",
+    yaxis_title="TWh",
+    width=800,
+    height=500
+)
+fig.show()
+```
+
+![New Storage Capacities2](figures/new_capacity_no_zero.png)
+
+Then we do a **RateOfActivity** example. We choose to group by "TS" (hour) along the x-axis, and stack discharge and charge on top of each other. And as an example we do legends by **Technology** and **Mode**.
+
+```python
+bar = BarFacilitator(sol_paths={"normal": NORMAL_DATA}, type_of_data_to_read="RateOfActivity", 
+                     x_grouping_columns=["TS"], legend_grouping_columns=["Technology", "Mode"])
+
+# Get data
+data = bar.get_relevant_data()
+
+# Fix yearsplit scaling
+data.df["Value"] *= data.year_split
+
+# Keep only Geothermal for this example
+data.filter_by_identifier(column="Technology", identifier="HLDH_Geothermal")
+
+# Aggregate regions
+data.aggreagate_all_by_sum(column_to_aggregate="Region", aggregated_entry_name="ALL", column_to_sum="Value")
+
+# Do only 2050
+data.df = data.df[data.df["Year"] == 2050]
+
+# Generate traces and figure
+fig = bar.generate_figure(bar.generate_traces(data))
+
+# Update layout
+fig.update_layout(
+    title=f"Rate of activity district heat storages (2050)",
+    yaxis_title="TWh",
+    xaxis_title="Year",
+    width=900,
+    height=600
+)
+fig.show()
+```
+
+![Rate of activity](figures/rate_of_activity.png)
+
+## StackedEvolutionPlot
+
+Here we also show an example of how to do a **StackedEvolutionPlot**. We plot the accumulated capacity of district heat over the years.
+
+```python
+# We create a evolution facilitator, and use "Region" as the identifier for our legends
+storage_evolution = StackedQuantityEvolutionFacilitatorBase(sol_path=NORMAL_DATA, type_of_data_to_read="NewStorageCapacity", extra_identifying_columns=["Region"])
+
+# Get relevant data
+d = storage_evolution.get_relevant_data()
+
+# We want to look at only district heat
+d.filter_by_containing_string(column="Storage", identifier="S_Heat_HLDH")
+
+# We want aggregate all regions in EU
+d.aggreagate_all_by_sum(column_to_aggregate="Region", aggregated_entry_name="EU", column_to_sum="Value")
+
+# Do cumsum over years do get the accumulated storage capacity
+d.df["Value"] = d.df.groupby("Region")["Value"].cumsum()
+
+fig = storage_evolution.generate_figure(storage_evolution.generate_traces(d))
+
+fig.update_layout(
+    width=1400,
+    height=800,
+    title=f"Accumulated Storage Capacity District Heat Europe",
+    yaxis_title="TWh",
+    xaxis_title="Year",
+)
+fig.show()
+```
+
+![Accumulated Storage Capacity](figures/accumulated_storage_capacity.png)
+
 
