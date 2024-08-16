@@ -33,6 +33,8 @@ The repository have ``Faciliator-classes`` that have the following methods:
 
 ## Examples
 
+(See the ```./experiments/example_experiments.ipynb``` folder a working notebook with examples)
+
 One of the supported plot types are **Bar**-plots. Here is an example of how to make a bar plot of installed storage capacities in Europe in 2050.
 
 ```python
